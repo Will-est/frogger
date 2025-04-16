@@ -24,12 +24,13 @@ class LeapModelConfig(RobotModelConfig):
         The hand to use. Can be "rh" or "lh".
     """
 
-    hand: str = "lh"
+    hand: str = "rh"
+    palm_contact: bool = False
 
     def __post_init__(self) -> None:
         """Post-initialization checks."""
         assert self.hand in ["lh", "rh"]
-        self.model_path = f"leap/robot.urdf"
+        self.model_path = f"leap_{self.hand}/leap.urdf"
         self.model_class = LeapModel
         if self.name is None:
             self.name = f"leap_{self.hand}"

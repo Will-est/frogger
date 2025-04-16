@@ -1,0 +1,64 @@
+INFO:drake:Meshcat listening for connections at http://localhost:7000
+INFO:drake:Meshcat listening for connections at http://localhost:7001
+INFO:drake:Meshcat listening for connections at http://localhost:7002
+INFO:drake:Meshcat listening for connections at http://localhost:7003
+INFO:drake:Meshcat listening for connections at http://localhost:7004
+INFO:drake:Meshcat listening for connections at http://localhost:7005
+INFO:drake:Meshcat listening for connections at http://localhost:7006
+INFO:drake:Meshcat listening for connections at http://localhost:7007
+INFO:drake:Meshcat listening for connections at http://localhost:7008
+INFO:drake:Meshcat listening for connections at http://localhost:7009
+INFO:drake:Meshcat listening for connections at http://localhost:7010
+INFO:drake:Meshcat listening for connections at http://localhost:7011
+INFO:drake:Meshcat listening for connections at http://localhost:7012
+INFO:drake:Meshcat listening for connections at http://localhost:7013
+INFO:drake:Meshcat listening for connections at http://localhost:7014
+INFO:drake:Meshcat listening for connections at http://localhost:7015
+INFO:drake:Meshcat listening for connections at http://localhost:7016
+INFO:drake:Meshcat listening for connections at http://localhost:7017
+INFO:drake:Meshcat listening for connections at http://localhost:7018
+INFO:drake:Meshcat listening for connections at http://localhost:7019
+INFO:drake:Meshcat listening for connections at http://localhost:7020
+INFO:drake:Meshcat listening for connections at http://localhost:7021
+INFO:drake:Meshcat listening for connections at http://localhost:7022
+INFO:drake:Meshcat listening for connections at http://localhost:7023
+INFO:drake:Meshcat listening for connections at http://localhost:7024
+INFO:drake:Meshcat listening for connections at http://localhost:7025
+INFO:drake:Meshcat listening for connections at http://localhost:7026
+INFO:drake:Meshcat listening for connections at http://localhost:7027
+INFO:drake:Meshcat listening for connections at http://localhost:7028
+INFO:drake:Meshcat listening for connections at http://localhost:7029
+INFO:drake:Meshcat listening for connections at http://localhost:7030
+INFO:drake:Meshcat listening for connections at http://localhost:7031
+INFO:drake:Meshcat listening for connections at http://localhost:7032
+INFO:drake:Meshcat listening for connections at http://localhost:7033
+INFO:drake:Meshcat listening for connections at http://localhost:7034
+INFO:drake:Meshcat listening for connections at http://localhost:7035
+INFO:drake:Meshcat listening for connections at http://localhost:7036
+INFO:drake:Meshcat listening for connections at http://localhost:7037
+INFO:drake:Meshcat listening for connections at http://localhost:7038
+INFO:drake:Meshcat listening for connections at http://localhost:7039
+Traceback (most recent call last):
+  File "/home/bowenj/Projects/DexFun/third_parties/frogger/examples/test_batch_width_search.py", line 245, in <module>
+    mesh_status[mesh_name]["successful_grasps"] = grasp_id
+
+  File "/home/bowenj/Projects/DexFun/third_parties/frogger/examples/test_batch_width_search.py", line 204, in main
+    mesh_status = {}
+                     
+  File "/home/bowenj/Projects/DexFun/third_parties/frogger/examples/test_batch_width_search.py", line 115, in attempt_grasp_for_mesh
+    q_star, q0 = timeout_func(frogger.generate_grasp)(
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/bowenj/Projects/DexFun/third_parties/frogger/frogger/utils.py", line 71, in wrapper
+    thread.join(seconds)
+  File "/home/bowenj/anaconda3/envs/frogger/lib/python3.11/threading.py", line 1123, in join
+    self._wait_for_tstate_lock(timeout=max(timeout, 0))
+  File "/home/bowenj/anaconda3/envs/frogger/lib/python3.11/threading.py", line 1139, in _wait_for_tstate_lock
+    if lock.acquire(block, timeout):
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+KeyboardInterrupt
+Exception ignored in: <module 'threading' from '/home/bowenj/anaconda3/envs/frogger/lib/python3.11/threading.py'>
+Traceback (most recent call last):
+  File "/home/bowenj/anaconda3/envs/frogger/lib/python3.11/threading.py", line 1590, in _shutdown
+    lock.acquire()
+KeyboardInterrupt: 
+FATAL: exception not rethrown

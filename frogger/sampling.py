@@ -305,6 +305,7 @@ class HeuristicICSampler(ICSampler):
             # restrict object state for IK, since it's a free body
             q_guess = plant.GetPositions(self.model.plant_context)
             q_obj = q_guess[-7:]  # quaternion + position of object
+            q_obj[0:4] = np.array([1.0, 0.0, 0.0, 0.0])  # quaternion
             ik.get_mutable_prog().AddBoundingBoxConstraint(q_obj, q_obj, ik.q()[-7:])
 
             # any additional constraints - if the action in this function has a chance
@@ -403,6 +404,7 @@ class HeuristicAlgrICSampler(HeuristicICSampler):
         P_WFs = np.stack((p_if, p_mf, p_rf, p_th))
 
         # defining frames and positions of initial guess for contacts
+        return
         contact_bodies = [
             self.model.plant.GetBodyByName(f"algr_{hand}_if_ds"),  # index
             self.model.plant.GetBodyByName(f"algr_{hand}_mf_ds"),  # middle

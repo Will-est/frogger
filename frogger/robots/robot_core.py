@@ -462,6 +462,7 @@ class RobotModel:
                     p_tip_C = pA
                     f_tip = fA
                     key = (body_name_A, body_name_B)
+                    robot_name = body_name_A
                 else:
                     p_tip_W = self.plant.CalcPointsPositions(
                         self.plant_context,
@@ -472,15 +473,17 @@ class RobotModel:
                     p_tip_C = pB
                     f_tip = fB
                     key = (body_name_B, body_name_A)
+                    robot_name = body_name_B
 
                 if key not in self.hand_obj_cols or sd < self.hand_obj_cols[key][0]:
-                    self.hand_obj_cols[key] = (sd, -Dgi, p_tip_W, p_tip_C, f_tip)
+                    self.hand_obj_cols[key] = (sd, -Dgi, p_tip_W, p_tip_C, f_tip, robot_name)
 
         # updating p_tips and J_tips
         h = []
         Dh = []
         p_tips = []
         J_tips = []
+        contact_names = []
         for _, v in sorted(self.hand_obj_cols.items()):
             h.append(v[0])
             Dh.append(v[1])
@@ -495,10 +498,13 @@ class RobotModel:
                     self.plant.world_frame(),
                 )[..., : self.n]
             )
+            contact_names.append(v[5])
         self.h_tip = np.array(h)
         self.Dh_tip = np.array(Dh)
         self.p_tips = np.array(p_tips)
         self.J_tips = np.array(J_tips)
+        self.contact_names = contact_names
+        # print(contact_names)
 
     def _finish_ineq_cons(self) -> None:
         """Finishes computing inequality constraints and their gradients."""

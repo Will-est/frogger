@@ -1,4 +1,5 @@
 import numpy as np
+import time
 from typing import List, Tuple, Optional
 
 from frogger.solvers import Frogger, FroggerConfig
@@ -14,25 +15,30 @@ class FunctionalFrogger(Frogger):
     def __init__(
         self, 
         cfg: FroggerConfig,
-        functional_contacts: List[Tuple[np.ndarray, Optional[np.ndarray]]]
+        actuation_contacts: List[Tuple[np.ndarray, Optional[np.ndarray]]]
     ) -> None:
         # if not isinstance(cfg.model, FunctionalRobotModel):
         #     raise TypeError("Model must be FunctionalRobotModel")
         
         super().__init__(cfg)
-        self.model.functional_contacts = functional_contacts
+        self.model.actuation_contacts = actuation_contacts
 
     def compute_contact_correspondence(self, fingertip_poses: List[Tuple[np.ndarray, np.ndarray]]) -> List[int]:
         """Compute correspondence between fingertips and functional contacts."""
         fingertip_positions = np.array([pose[0] for pose in fingertip_poses])
         n_fingers = len(fingertip_poses)
-        n_functional = len(self.model.functional_contacts)
+        n_functional = len(self.model.actuation_contacts)
         
-        # Compute distance matrix
+        # Compute distance matrix, any palm related contact distance should be set to inf
         distances = np.zeros((n_fingers, n_functional))
         for i, (pos, _) in enumerate(fingertip_poses):
-            for j, (func_pos, _) in enumerate(self.model.functional_contacts):
-                distances[i, j] = np.linalg.norm(pos - func_pos)
+            is_palm = "palm" in self.model.fingertip_names[i]
+            for j, (func_pos, _) in enumerate(self.model.actuation_contacts):
+                is_palm = is_palm or "palm" in self.model.fingertip_names[j]
+                if is_palm:
+                    distances[i, j] = np.inf
+                else:
+                    distances[i, j] = np.linalg.norm(pos - func_pos)
         
         # Assign correspondences
         correspondence = [-1] * n_fingers
@@ -48,20 +54,28 @@ class FunctionalFrogger(Frogger):
             
         return correspondence
 
-    def generate_grasp(self, optimize=True, check_constraints=False, **kwargs) -> Tuple[np.ndarray, np.ndarray]:
-        """Generate grasp with functional contacts."""
+    def generate_grasp(self, optimize=True, check_constraints=False, timeout_seconds: Optional[float] = None, **kwargs) -> Tuple[np.ndarray, np.ndarray]:
+        """
+        Generate grasp with functional contacts. If timeout_seconds is provided,
+        the grasp generation loop will abort if the total elapsed time exceeds timeout_seconds.
+        """
+        start_total = time.time()
         success = False
+        sampling_times = []
+        optimization_times = []
+        
         while not success:
-            # Sample initial configuration
-            # q0, _ = timeout(60.0)(self.sampler.sample_configuration)(**kwargs)
+            # Check if overall timeout has been exceeded.
+            if timeout_seconds is not None and (time.time() - start_total) > timeout_seconds:
+                raise TimeoutError(f"generate_grasp timed out after {timeout_seconds} seconds")
+            
+            # Time sampling
+            sampling_start = time.time()
             q0, _ = self.sampler.sample_configuration(**kwargs)
-            # try:
-            #     q0, _ = timeout(60.0)(self.sampler.sample_configuration)(**kwargs)
-            # except RuntimeError as e:
-            #     print(f"Sampling error: {e}. Resampling....")
-            #     continue
+            sampling_time = time.time() - sampling_start
+            sampling_times.append(sampling_time)
 
-             # Compute correspondence and update model
+            # Compute correspondence and update model
             self.model.set_q(q0)
             fingertip_poses = self.model.compute_fingertip_poses()
             self.model.contact_correspondence = self.compute_contact_correspondence(fingertip_poses)
@@ -76,33 +90,38 @@ class FunctionalFrogger(Frogger):
                 else:
                     return None, q0            
 
-            # Optimize
-            # q_star = self.opt.optimize(q0)
+            # Time optimization
+            optimization_start = time.time()
             try:
                 q_star = self.opt.optimize(q0)
-            except (RuntimeError, ValueError, nlopt.RoundoffLimited) as e:
+                optimization_time = time.time() - optimization_start
+                optimization_times.append(optimization_time)
+            except (ValueError, nlopt.RoundoffLimited) as e:
                 print(f"Optimization error: {e}! Resampling...")
                 q_star = np.nan * np.ones(self.model.n)
-                continue
+            except RuntimeError as e:
+                raise e
+            except Exception as e:
+                raise e
 
             # Check solution
             if np.any(np.isnan(q_star)):
                 print("Failed: Optimization returned NaN values")
                 continue
-                
+                    
             # Verify constraints
             g_val = np.zeros(self.n_ineq)
             self.g(g_val, q_star, np.zeros(0))
             h_val = np.zeros(self.n_eq)
             self.h(h_val, q_star, np.zeros(0))
 
-            # Check constraint violations
+            # Compute constraint violations
             surf_vio = np.max(np.abs(h_val[: self.n_surf]))
-            couple_vio = np.max(np.abs(h_val[self.n_surf : (self.n_surf + self.n_couple)])) if self.model.n_couple > 0 else 0.0
+            couple_vio = np.max(np.abs(h_val[self.n_surf:(self.n_surf + self.n_couple)])) if self.model.n_couple > 0 else 0.0
             h_extra_vio = np.max(np.abs(h_val[(self.n_surf + self.n_couple):])) if len(h_val[(self.n_surf + self.n_couple):]) > 0 else 0.0
-            
+                
             joint_vio = max(np.max(g_val[: self.model.n_bounds]), 0.0)
-            col_vio = max(np.max(g_val[self.model.n_bounds : (self.model.n_bounds + self.model.n_pairs)]), 0.0)
+            col_vio = max(np.max(g_val[self.model.n_bounds:(self.model.n_bounds + self.model.n_pairs)]), 0.0)
             g_extra_vio = max(np.max(g_val[(self.model.n_bounds + self.model.n_pairs):]), 0.0) if len(g_val[(self.model.n_bounds + self.model.n_pairs):]) > 0 else 0.0
 
             # Print specific failure reasons
@@ -119,16 +138,34 @@ class FunctionalFrogger(Frogger):
 
             # Check if solution is feasible
             success = (
-                surf_vio <= self.tol_surf
-                and couple_vio <= self.tol_couple
-                and joint_vio <= self.tol_joint
-                and col_vio <= self.tol_col
-                and g_extra_vio <= self.tol_fclosure
-                and h_extra_vio <= self.tol_fclosure
+                surf_vio <= self.tol_surf and
+                couple_vio <= self.tol_couple and
+                joint_vio <= self.tol_joint and
+                col_vio <= self.tol_col and
+                g_extra_vio <= self.tol_fclosure and
+                h_extra_vio <= self.tol_fclosure
             )
-            
+                
             if success:
-                print("Success: All constraints satisfied")
+                # Print timing statistics
+                print("Success!")
+                print("\nTiming Statistics:")
+                print("Sampling:")
+                print(f"  Total attempts: {len(sampling_times)}")
+                print(f"  Total time: {sum(sampling_times):.3f}s")
+                print(f"  Average time: {np.mean(sampling_times):.3f}s")
+                print(f"  Std deviation: {np.std(sampling_times):.3f}s")
+                print(f"  Last attempt: {sampling_times[-1]:.3f}s")
+                    
+                print("\nOptimization:")
+                print(f"  Total attempts: {len(optimization_times)}")
+                print(f"  Total time: {sum(optimization_times):.3f}s")
+                print(f"  Average time: {np.mean(optimization_times):.3f}s")
+                print(f"  Std deviation: {np.std(optimization_times):.3f}s")
+                print(f"  Last attempt: {optimization_times[-1]:.3f}s")
+                    
+                print("\nConstraints:")
+                print(f"Surface: {surf_vio:.2e}, Couple: {couple_vio:.2e}, Joint: {joint_vio:.2e}, Collision: {col_vio:.2e}, Extra: {g_extra_vio:.2e}")
                 return q_star, q0
             
 

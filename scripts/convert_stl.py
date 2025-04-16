@@ -28,6 +28,6 @@ def convert_stl_to_obj(input_dir, output_dir):
 
 if __name__ == "__main__":
     convert_stl_to_obj(
-        "models/leap/meshes_stl",
-        "models/leap/meshes_obj"
+        "models/leap_rh/meshes_stl",
+        "models/leap_rh/meshes_obj"
     )

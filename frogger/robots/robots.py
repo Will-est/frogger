@@ -164,11 +164,15 @@ class AlgrModelConfig(RobotModelConfig):
     """
 
     hand: str = "rh"
+    palm_contact: bool = False
 
     def __post_init__(self) -> None:
         """Post-initialization checks."""
         assert self.hand in ["lh", "rh"]
-        self.model_path = f"allegro/allegro_{self.hand}.sdf"
+        if self.palm_contact:
+            self.model_path = f"allegro/allegro_{self.hand}_palm.sdf"
+        else:
+            self.model_path = f"allegro/allegro_{self.hand}.sdf"
         self.model_class = AlgrModel
         if self.name is None:
             self.name = f"algr_{self.hand}"
